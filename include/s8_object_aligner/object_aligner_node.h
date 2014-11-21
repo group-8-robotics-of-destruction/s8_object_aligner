@@ -12,6 +12,13 @@ namespace s8 {
 
         const std::string ACTION_STOP =             s8::motor_controller_node::ACTION_STOP;
         const std::string ACTION_OBJECT_ALIGN =     "/s8/object_align";
+
+        enum ObjectAlignFinishedReason {
+            TIMEOUT,
+            FAILED,
+            PREEMPTED,
+            ALIGNED
+        };
     }
 }
 

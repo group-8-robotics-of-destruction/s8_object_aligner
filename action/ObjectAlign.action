@@ -3,6 +3,7 @@ bool align
 ---
 #result
 bool aligned
+int32 reason
 ---
 #feedback
 float32 percent_aligned

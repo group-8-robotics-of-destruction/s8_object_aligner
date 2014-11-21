@@ -11,6 +11,7 @@ namespace s8 {
         const std::string TOPIC_OBJECT_DIST_POSE =  "todo";
 
         const std::string ACTION_STOP =             s8::motor_controller_node::ACTION_STOP;
+        const std::string ACTION_OBJECT_ALIGN =     "/s8/object_align";
     }
 }
 

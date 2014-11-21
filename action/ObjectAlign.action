@@ -1,0 +1,8 @@
+#goal
+bool align
+---
+#result
+bool aligned
+---
+#feedback
+float32 percent_aligned

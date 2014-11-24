@@ -8,6 +8,10 @@
 #include <geometry_msgs/Twist.h>
 #include <s8_object_aligner/ObjectAlignAction.h>
 #include <s8_motor_controller/StopAction.h>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+#include <cstdlib>
 
 using namespace s8;
 using namespace s8::object_aligner_node;
@@ -18,13 +22,24 @@ class ObjectAligner : public Node {
     actionlib::SimpleActionServer<s8_object_aligner::ObjectAlignAction> object_align_action_server;
     actionlib::SimpleActionClient<s8_motor_controller::StopAction> stop_action;
 
+    double min_dist;
+    double max_dist;
+    double min_angle;
+    double max_angle;
+    double dist_speed, turn_speed;
+    double distance;
+    double pose;
+
     bool align;
     bool preempted;
     double v;
     double w;
 
 public:
-    ObjectAligner() : align(false), preempted(false), v(0.0), w(0.0), object_align_action_server(nh, ACTION_OBJECT_ALIGN, boost::bind(&ObjectAligner::action_execute_object_align_callback, this, _1), false), stop_action(ACTION_STOP, true) {
+    ObjectAligner() : distance(0.0), pose(0.0),dist_speed(0.0),turn_speed(0.0), align(false), preempted(false), v(0.0), w(0.0), object_align_action_server(nh, ACTION_OBJECT_ALIGN, boost::bind(&ObjectAligner::action_execute_object_align_callback, this, _1), false), stop_action(ACTION_STOP, true) {
+        add_params();
+        ROS_INFO("dist_speed: %lf, turn_speed: %lf", dist_speed, turn_speed);
+
         object_align_action_server.registerPreemptCallback(boost::bind(&ObjectAligner::object_align_action_cancel_callback, this));
         object_align_action_server.start();
 
@@ -39,6 +54,7 @@ public:
 
 private:
     void action_execute_object_align_callback(const s8_object_aligner::ObjectAlignGoalConstPtr & object_align_goal) {
+        stop(); //TODO remove me?
         ROS_INFO("STARTED: Object align action started!");
         align = true;
         preempted = false;
@@ -87,6 +103,9 @@ private:
     }
 
     void object_dist_pose_callback(const s8_msgs::DistPose::ConstPtr & dist_pose) {
+        distance = (double)dist_pose->dist;
+        pose     = (double)dist_pose->pose;
+
         if(!align) {
             return;
         }
@@ -107,6 +126,32 @@ private:
             return;
         }
 
+        ROS_INFO("distance: %lf, min_dist: %lf, dist_speed: %lf", distance, min_dist, dist_speed);
+        if(distance < min_dist) {
+            v = -dist_speed;
+        }
+        else if(distance > max_dist) {
+            v = dist_speed;
+        }
+        else{
+            v = 0;
+            ROS_INFO("v = 0");
+        }
+
+/*
+        if(pose < min_angle) {
+            w = turn_speed;
+        }
+        else if (pose > max_angle) {
+            w = -turn_speed;
+        }
+        else {
+            w = 0;
+        }
+*/
+        w = 0;
+
+        ROS_INFO("Aligning! v: %lf, w: %lf, distance: %lf, angle: %lf", v, w, distance, pose);
         publish_twist();
     }
 
@@ -121,16 +166,14 @@ private:
      * Tells if the robot is in an aligned position to the object which mean that the aligner should let master take over again.
      */
     bool is_aligned() {
-        //TODO: implement me.
-        return false;
+        return (distance >= min_dist && distance <= max_dist);// && pose >= min_angle) && pose <= max_angle;
     }
 
     /**
      * Tells if the robot has lost the object or somehow is in another invalid state, which means that the alignment failed and master needs to take over.
      */
     bool is_invalid_align_state() {
-        //TODO: implement me.
-        return false;
+        return distance < 0;
     }
 
     void stop() {
@@ -147,6 +190,21 @@ private:
         } else {
             ROS_WARN("Stop action timed out.");
         }
+    }
+
+    void add_params() {
+        const char * home = ::getenv("HOME");
+        boost::property_tree::ptree pt;
+        boost::property_tree::read_json(home + CONFIG_DOC, pt);
+        // DISTANCE
+        min_dist = pt.get<double>("min_dist");
+        max_dist = pt.get<double>("max_dist");
+        // ANGLE
+        min_angle = pt.get<double>("min_angle");
+        max_angle = pt.get<double>("max_angle");
+        // TURN
+        dist_speed = pt.get<double>("dist_speed");
+        turn_speed = pt.get<double>("turn_speed");
     }
 };
 

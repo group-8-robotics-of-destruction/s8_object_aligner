@@ -1,0 +1,11 @@
+// Configuration options
+{
+    // Distance
+    "max_dist"      :   0.55,
+    "min_dist"      :   0.40,
+    "max_angle"     :   0.15,
+    "min_angle"     :   -0.15,
+    // SPEED
+    "dist_speed"    :   0.05,
+    "turn_speed"    :   0.2
+}
